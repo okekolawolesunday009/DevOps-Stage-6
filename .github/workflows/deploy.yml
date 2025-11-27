@@ -61,7 +61,7 @@ jobs:
         source: "deployment.tar.gz"
         target: "/tmp/"
 
-    - name: Deploy to server
+    - name: Deploy to server.
       uses: appleboy/ssh-action@v0.1.6
       with:
         host: ${{ secrets.HOST }}

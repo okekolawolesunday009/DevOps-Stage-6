@@ -113,13 +113,14 @@ jobs:
           
           # Stop existing containers (try both docker-compose and docker compose)
           sudo docker-compose down || sudo docker compose down || true
-          
-          # Build and deploy (try docker-compose first, fallback to docker compose)
-          sudo docker-compose up -d --build --remove-orphans || sudo docker compose up -d --build --remove-orphans
-          
+
+           
           # Clean up old images
           sudo docker image prune -f
           
+          # Build and deploy (try docker-compose first, fallback to docker compose)
+          sudo docker-compose up -d --build --remove-orphans || sudo docker compose up -d --build --remove-orphans
+         
           # Health check
           sleep 30
           curl -f https://www.prod.chickenkiller.com || curl -f http://localhost:8080 || echo "Health check failed but continuing..."

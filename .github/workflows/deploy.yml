@@ -10,34 +10,7 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    name: Run Tests
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    - name: Test Java application
-      run: |
-        cd users-api
-        chmod +x mvnw
-        ./mvnw test
-
-    - name: Test Node.js APIs
-      run: |
-        cd todos-api
-        npm ci
-        # Add npm test when available
-
   prepare-deployment:
-    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     

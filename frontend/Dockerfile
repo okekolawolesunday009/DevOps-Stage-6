@@ -1,8 +1,14 @@
-FROM node:18-alpine
+FROM node:14-alpine
+
+WORKDIR /app
+
+# Install Python and build tools needed for node-sass
+RUN apk add --no-cache python2 make g++
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps --ignore-scripts
+
 COPY . .
 RUN npm run build
 

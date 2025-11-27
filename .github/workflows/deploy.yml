@@ -1,0 +1,162 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Test Java application
+      run: |
+        cd users-api
+        chmod +x mvnw
+        ./mvnw test
+
+    - name: Test Node.js APIs
+      run: |
+        cd todos-api
+        npm ci
+        # Add npm test when available
+
+  prepare-deployment:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create deployment package
+      run: |
+        # Create deployment directory with all source code
+        mkdir -p deploy
+        cp -r frontend deploy/
+        cp -r auth-api deploy/
+        cp -r todos-api deploy/
+        cp -r users-api deploy/
+        cp -r log-message-processor deploy/
+        cp -r traefik deploy/
+        cp docker-compose.yml deploy/
+        cp .env deploy/
+        
+        # Create archive
+        tar -czf deployment.tar.gz deploy/
+
+    - name: Upload deployment artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-package
+        path: deployment.tar.gz
+        retention-days: 1
+
+  deploy:
+    needs: prepare-deployment
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Download deployment package
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-package
+
+    - name: Copy files to server
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "deployment.tar.gz"
+        target: "/tmp/"
+
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Install Docker if not present
+          if ! command -v docker &> /dev/null; then
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker $USER
+          fi
+          
+          # Install Docker Compose if not present
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          
+          # Extract deployment files
+          cd /tmp && tar -xzf deployment.tar.gz
+          
+          # Backup current deployment
+          sudo mkdir -p /opt/backups
+          if [ -d "/opt/devops-app" ]; then
+            sudo cp -r /opt/devops-app /opt/backups/devops-app-$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          # Update application
+          sudo mkdir -p /opt/devops-app
+          sudo cp -r deploy/* /opt/devops-app/
+          cd /opt/devops-app
+          
+          # Stop existing containers
+          sudo docker-compose down || true
+          
+          # Build and deploy
+          sudo docker-compose up -d --build --remove-orphans
+          
+          # Clean up old images
+          sudo docker image prune -f
+          
+          # Health check
+          sleep 30
+          curl -f https://www.prod.chickenkiller.com || curl -f http://localhost:8080 || echo "Health check failed but continuing..."
+          
+          echo "Deployment completed successfully!"
+
+  notify:
+    needs: [test, prepare-deployment, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+ 

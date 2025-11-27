@@ -33,7 +33,7 @@ jobs:
     - name: Build frontend
       run: |
         cd frontend
-        npm run build
+        npm ci --legacy-peer-deps
 
     - name: Set up Java
       uses: actions/setup-java@v4
@@ -153,18 +153,3 @@ jobs:
           curl -f https://www.prod.chickenkiller.com || curl -f http://localhost:8080 || echo "Health check failed but continuing..."
           
           echo "Deployment completed successfully!"
-
-  notify:
-    needs: [test, prepare-deployment, deploy]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-    - name: Notify deployment status
-      uses: 8398a7/action-slack@v3
-      if: always()
-      with:
-        status: ${{ job.status }}
-        channel: '#deployments'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        fields: repo,message,commit,author,action,eventName,ref,workflow

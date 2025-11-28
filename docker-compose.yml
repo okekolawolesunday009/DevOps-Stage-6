@@ -16,7 +16,7 @@ services:
       # ACME SSL
       - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
       - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.myresolver.acme.email=your@email.com"
+      - "--certificatesresolvers.myresolver.acme.email=okekolawoles36@gmail.com"
       - "--certificatesresolvers.myresolver.acme.storage=/acme.json"
 
       # Dashboard ENABLED but secured
@@ -54,7 +54,7 @@ services:
       - app-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.auth-api.rule=Host(`prod.chickenkiller.com`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth-api.rule=Host(`www.prod.chickenkiller.com`) && PathPrefix(`/api/auth`)"
       - "traefik.http.routers.auth-api.entrypoints=websecure"
       - "traefik.http.routers.auth-api.tls.certresolver=myresolver"
       - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
@@ -72,7 +72,7 @@ services:
       - app-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.todos-api.rule=Host(`prod.chickenkiller.com`) && PathPrefix(`/api/todos`)"
+      - "traefik.http.routers.todos-api.rule=Host(`www.prod.chickenkiller.com`) && PathPrefix(`/api/todos`)"
       - "traefik.http.routers.todos-api.entrypoints=websecure"
       - "traefik.http.routers.todos-api.tls.certresolver=myresolver"
       - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
@@ -90,7 +90,7 @@ services:
       - app-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.users-api.rule=Host(`prod.chickenkiller.com`) && PathPrefix(`/api/users`)"
+      - "traefik.http.routers.users-api.rule=Host(`www.prod.chickenkiller.com`) && PathPrefix(`/api/users`)"
       - "traefik.http.routers.users-api.entrypoints=websecure"
       - "traefik.http.routers.users-api.tls.certresolver=myresolver"
       - "traefik.http.services.users-api.loadbalancer.server.port=8083"
@@ -108,7 +108,7 @@ services:
       - app-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`prod.chickenkiller.com`)"
+      - "traefik.http.routers.frontend.rule=Host(`www.prod.chickenkiller.com`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=myresolver"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"

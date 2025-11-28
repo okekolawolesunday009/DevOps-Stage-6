@@ -14,7 +14,7 @@ env:
 
 jobs:
   plan:
-    name: Terraform Plan & Drift Detection
+    name: Terraform Plan & Drift Detection.
     runs-on: ubuntu-latest
     outputs:
       has_changes: ${{ steps.plan.outputs.has_changes }}

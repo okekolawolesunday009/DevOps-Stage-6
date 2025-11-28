@@ -25,7 +25,7 @@ variable "instance_type" {
 variable "key_pair_name" {
   description = "AWS key pair name for EC2 access"
   type        = string
-  default     = "devops-keypair"
+  default     = "aws.pem"
 }
 
 variable "domain_name" {
@@ -37,7 +37,7 @@ variable "domain_name" {
 variable "notification_email" {
   description = "Email for drift detection notifications"
   type        = string
-  default     = "okekolawolsunday@gmail.com"
+  default     = "okekolawolesunday@gmail.com"
 }
 
 variable "github_repo" {

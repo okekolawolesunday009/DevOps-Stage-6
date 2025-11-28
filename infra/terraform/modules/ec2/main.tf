@@ -10,7 +10,8 @@ resource "aws_instance" "my_ec2" {
 
 resource "aws_key_pair" "local_key" {
   key_name   = "local-key"
-  public_key = file(var.ec2_key)
+  # Use pathexpand() to resolve ~ (home directory) in the file path
+  public_key = file(pathexpand(var.ec2_key))
 }
 
 

@@ -1,27 +1,38 @@
-FROM node:14-alpine
+# ---- Builder Stage ----
+FROM node:14-alpine3.12 AS builder
 
+# Install Python2 and build tools for node-sass
+RUN apk add --no-cache python2 make g++
+
+# Create app directory
 WORKDIR /app
 
-# Install Python3 and build tools (Python2 no longer available)
-RUN apk add --no-cache python3 make g++ py3-pip
+# Copy package files
+COPY package*.json ./
 
-# Create python2 symlink for compatibility
-RUN ln -sf python3 /usr/bin/python
-RUN ln -sf pip3 /usr/bin/pip
+# Install dependencies
+RUN npm install
 
-COPY package.json package-lock.json ./
-
-# Use legacy peer deps and ignore problematic scripts
-RUN npm install --legacy-peer-deps --ignore-scripts
-
+# Copy the rest of the project
 COPY . .
 
-# Try to build, if it fails, serve source files directly
-RUN npm run build || (echo "Build failed, serving source files" && mkdir -p build && cp -r src/* build/ 2>/dev/null) || echo "Will serve from src"
+# Build the frontend
+RUN npm run build
 
-# List what we have
-RUN ls -la && (ls -la build/ 2>/dev/null || echo "No build directory")
 
-EXPOSE 8080
-# Smart serving: check what exists and serve accordingly
-CMD ["sh", "-c", "if [ -d 'build' ] && [ -n \"$(ls -A build 2>/dev/null)\" ]; then echo 'Serving from build/' && npx serve -s build -l 8080; elif [ -d 'dist' ] && [ -n \"$(ls -A dist 2>/dev/null)\" ]; then echo 'Serving from dist/' && npx serve -s dist -l 8080; else echo 'Serving from src/' && npx serve -s src -l 8080; fi"]
+# ---- Nginx Stage ----
+FROM nginx:alpine
+
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Clean default nginx html directory
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy build output
+COPY --from=builder /app/dist /usr/share/nginx/html/
+
+EXPOSE 80

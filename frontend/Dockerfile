@@ -23,6 +23,5 @@ RUN npm run build || (echo "Build failed, serving source files" && mkdir -p buil
 RUN ls -la && (ls -la build/ 2>/dev/null || echo "No build directory")
 
 EXPOSE 8080
-
 # Smart serving: check what exists and serve accordingly
 CMD ["sh", "-c", "if [ -d 'build' ] && [ -n \"$(ls -A build 2>/dev/null)\" ]; then echo 'Serving from build/' && npx serve -s build -l 8080; elif [ -d 'dist' ] && [ -n \"$(ls -A dist 2>/dev/null)\" ]; then echo 'Serving from dist/' && npx serve -s dist -l 8080; else echo 'Serving from src/' && npx serve -s src -l 8080; fi"]

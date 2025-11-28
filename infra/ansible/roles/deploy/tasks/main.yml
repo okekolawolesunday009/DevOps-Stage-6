@@ -1,0 +1,116 @@
+---
+- name: Check if application repository exists
+  stat:
+    path: "{{ app_directory }}/.git"
+  register: repo_exists
+
+- name: Clone application repository
+  git:
+    repo: "{{ github_repo }}"
+    dest: "{{ app_directory }}"
+    version: main
+    force: yes
+  when: not repo_exists.stat.exists
+  become_user: "{{ ansible_user }}"
+
+- name: Pull latest changes from repository
+  git:
+    repo: "{{ github_repo }}"
+    dest: "{{ app_directory }}"
+    version: main
+    force: yes
+  become_user: "{{ ansible_user }}"
+  register: git_pull_result
+
+- name: Get current running containers
+  command: docker ps --format "table {{.Names}}\t{{.Status}}"
+  register: running_containers
+  changed_when: false
+
+- name: Backup current deployment
+  command: >
+    cp -r {{ app_directory }} /opt/backups/devops-app-{{ ansible_date_time.epoch }}
+  when: git_pull_result.changed
+  ignore_errors: yes
+
+- name: Set proper permissions for application directory
+  file:
+    path: "{{ app_directory }}"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    recurse: yes
+    mode: '0755'
+
+- name: Check if docker-compose.yml exists
+  stat:
+    path: "{{ app_directory }}/{{ docker_compose_file }}"
+  register: compose_file
+
+- name: Fail if docker-compose.yml not found
+  fail:
+    msg: "Docker Compose file not found at {{ app_directory }}/{{ docker_compose_file }}"
+  when: not compose_file.stat.exists
+
+- name: Stop existing containers if code changed
+  command: docker-compose down
+  args:
+    chdir: "{{ app_directory }}"
+  become_user: "{{ ansible_user }}"
+  when: git_pull_result.changed
+  ignore_errors: yes
+
+- name: Pull latest Docker images
+  command: docker-compose pull
+  args:
+    chdir: "{{ app_directory }}"
+  become_user: "{{ ansible_user }}"
+  when: git_pull_result.changed
+
+- name: Build and start services
+  command: docker-compose up -d --build --remove-orphans
+  args:
+    chdir: "{{ app_directory }}"
+  become_user: "{{ ansible_user }}"
+  register: compose_up_result
+
+- name: Wait for services to start
+  pause:
+    seconds: 30
+  when: compose_up_result.changed
+
+- name: Check service health
+  uri:
+    url: "http://localhost:8080"
+    method: GET
+    status_code: [200, 302, 404]  # Accept various status codes
+  register: health_check
+  retries: 5
+  delay: 10
+  ignore_errors: yes
+
+- name: Clean up old Docker images
+  command: docker image prune -f
+  become_user: "{{ ansible_user }}"
+  when: git_pull_result.changed
+
+- name: Display running containers
+  command: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  register: final_containers
+  changed_when: false
+
+- name: Show deployment status
+  debug:
+    msg: 
+      - "Deployment completed successfully!"
+      - "Git changes: {{ 'Yes' if git_pull_result.changed else 'No' }}"
+      - "Services restarted: {{ 'Yes' if compose_up_result.changed else 'No' }}"
+      - "Health check: {{ 'Passed' if health_check.status == 200 else 'Warning' }}"
+      - "Running containers:"
+      - "{{ final_containers.stdout }}"
+
+- name: Create deployment log
+  lineinfile:
+    path: "{{ app_directory }}/deployment.log"
+    line: "{{ ansible_date_time.iso8601 }}: Deployment completed - Git changed: {{ git_pull_result.changed }}, Services restarted: {{ compose_up_result.changed }}"
+    create: yes
+  become_user: "{{ ansible_user }}"

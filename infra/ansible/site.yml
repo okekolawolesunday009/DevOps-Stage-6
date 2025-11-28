@@ -1,0 +1,14 @@
+---
+- hosts: "{{ target_host | default('app_servers') }}"
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - dependencies
+    - deploy
+
+  vars:
+    domain_name: "{{ domain_name | default('www.prod.chickenkiller.com') }}"
+    github_repo: "{{ github_repo | default('https://github.com/okekolawolesunday009/DevOps-Stage-6.git') }}"
+    app_directory: "/opt/devops-app"
+    docker_compose_file: "docker-compose.yml"

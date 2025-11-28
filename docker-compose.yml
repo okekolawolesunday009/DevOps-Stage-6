@@ -1,136 +1,125 @@
-version: "3.9"
-
 services:
-
-  auth-api:
-    build:
-      context: ./auth-api
-    container_name: auth-api
-    environment:
-      AUTH_API_PORT: ${AUTH_API_PORT:-8081}
-      JWT_SECRET: ${JWT_SECRET:-myfancysecret}
-      USERS_API_ADDRESS: http://users-api:8083
-    expose:
-      - "8081"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.auth-api.rule=Host(`www.prod.chickenkiller.com`) && PathPrefix(`/api/auth`)"
-      - "traefik.http.routers.auth-api.entrypoints=websecure"
-      - "traefik.http.routers.auth-api.tls.certresolver=le"
-      - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
-      - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/api/auth"
-      - "traefik.http.routers.auth-api.middlewares=auth-strip"
-    networks:
-      - app-network
-
-  frontend:
-    build:
-      context: ./frontend
-    container_name: frontend
-    environment:
-      PORT: ${PORT:-8080}
-      AUTH_API_ADDRESS: ${AUTH_API_ADDRESS:-https://www.prod.chickenkiller.com/api/auth}
-      TODOS_API_ADDRESS: ${TODOS_API_ADDRESS:-https://www.prod.chickenkiller.com/api/todos}
-    expose:
-      - "8080"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`www.prod.chickenkiller.com`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=le"
-      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
-      - "traefik.http.routers.frontend.priority=1"
-    networks:
-      - app-network
-
-  log-message-processor:
-    build:
-      context: ./log-message-processor
-    container_name: log-message-processor
-    environment:
-      REDIS_HOST: ${REDIS_HOST:-redis-queue}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_CHANNEL: ${REDIS_CHANNEL:-log_channel}
-    networks:
-      - app-network
-
-  todos-api:
-    build:
-      context: ./todos-api
-    container_name: todos-api
-    environment:
-      TODO_API_PORT: ${TODO_API_PORT:-8082}
-      JWT_SECRET: ${JWT_SECRET:-myfancysecret}
-      REDIS_HOST: ${REDIS_HOST:-redis-queue}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_CHANNEL: ${REDIS_CHANNEL:-log_channel}
-    expose:
-      - "8082"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.todos-api.rule=Host(`www.prod.chickenkiller.com`) && PathPrefix(`/api/todos`)"
-      - "traefik.http.routers.todos-api.entrypoints=websecure"
-      - "traefik.http.routers.todos-api.tls.certresolver=le"
-      - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
-      - "traefik.http.middlewares.todos-strip.stripprefix.prefixes=/api/todos"
-      - "traefik.http.routers.todos-api.middlewares=todos-strip"
-    networks:
-      - app-network
-
-  user-api:
-    build:
-      context: ./users-api
-    container_name: users-api
-    environment:
-      SERVER_PORT: ${SERVER_PORT:-8083}
-      JWT_SECRET: ${JWT_SECRET:-myfancysecret}
-    expose:
-      - "8083"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.users-api.rule=Host(`www.prod.chickenkiller.com`) && PathPrefix(`/api/users`)"
-      - "traefik.http.routers.users-api.entrypoints=websecure"
-      - "traefik.http.routers.users-api.tls.certresolver=le"
-      - "traefik.http.services.users-api.loadbalancer.server.port=8083"
-      - "traefik.http.middlewares.users-strip.stripprefix.prefixes=/api/users"
-      - "traefik.http.routers.users-api.middlewares=users-strip"
-    networks:
-      - app-network
-
-  # Add Redis service since your other services depend on it
-  redis-queue:
-    image: redis:alpine
-    container_name: redis-queue
-    expose:
-      - "6379"
-    networks:
-      - app-network
-
+  # Traefik Reverse Proxy (LOCAL MODE - No SSL)
   traefik:
-    image: traefik:v2.9
+    image: traefik:v2.10
     container_name: traefik
     restart: unless-stopped
     command:
-      - --configFile=/etc/traefik/traefik.yml
+      # Enable Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      # Enable Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=true"  # Allow dashboard without auth (local only!)
+      # Logging for debugging
+      - "--log.level=DEBUG"
     ports:
-      - "80:80"
-      - "443:443"
-      - "9080:8080"  # Traefik dashboard
+      - "80:80"      # HTTP
+      - "8080:8080"  # Dashboard
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
-      - "./traefik:/letsencrypt"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`www.prod.chickenkiller.com`) && PathPrefix(`/traefik`)"
-      - "traefik.http.routers.traefik.entrypoints=websecure"
-      - "traefik.http.routers.traefik.tls.certresolver=le"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.middlewares.traefik-strip.stripprefix.prefixes=/traefik"
-      - "traefik.http.routers.traefik.middlewares=traefik-strip"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - app-network
-
+  # Redis Queue
+  redis:
+    image: redis:7-alpine
+    container_name: redis-queue
+    restart: unless-stopped
+    networks:
+      - app-network
+  # Auth API (Go)
+  auth-api:
+    image: okekolawoles36/auth-api:latest
+    container_name: auth-api
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - JWT_SECRET=myfancysecret
+      - AUTH_API_PORT=8081
+      - USERS_API_ADDRESS=http://users-api:8083
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-api.rule=Host(`localhost`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth-api.entrypoints=web"
+      - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
+  # Todos API (Node.js)
+  todos-api:
+    image: okekolawoles36/todo-api:latest
+    container_name: todos-api
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - AUTH_API_URL=http://auth-api:8081
+      - JWT_SECRET=myfancysecret
+      - REDIS_CHANNEL=log_channel
+    depends_on:
+      - redis
+      - auth-api
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.todos-api.rule=Host(`localhost`) && PathPrefix(`/api/todos`)"
+      - "traefik.http.routers.todos-api.entrypoints=web"
+      - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
+  # Users API (Java Spring Boot)
+  users-api:
+    image: okekolawoles36/users-api:latest
+    container_name: users-api
+    restart: unless-stopped
+    environment:
+      - SERVER_PORT=8083
+      - JWT_SECRET=myfancysecret
+    depends_on:
+      - redis
+      - auth-api
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.users-api.rule=Host(`localhost`) && PathPrefix(`/api/users`)"
+      - "traefik.http.routers.users-api.entrypoints=web"
+      - "traefik.http.services.users-api.loadbalancer.server.port=8083"
+  # Log Processor (Python)
+  log-processor:
+    image: okekolawoles36/log-message-processor:latest
+    container_name: log-processor
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=log_channel
+    depends_on:
+      - redis
+    networks:
+      - app-network
+  # Frontend (Vue.js)
+  frontend:
+    image: okekolawoles36/frontend:latest
+    container_name: frontend
+    restart: unless-stopped
+    environment:
+      - AUTH_API_ADDRESS=http://localhost/api/auth
+      - TODOS_API_ADDRESS=http://localhost/api/todos
+    depends_on:
+      - auth-api
+      - todos-api
+      - users-api
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
 networks:
   app-network:
     driver: bridge

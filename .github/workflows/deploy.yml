@@ -1,15 +1,70 @@
-name: Deploy to Production
+name: Application Deployment
 
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - 'auth-api/**'
+      - 'todos-api/**'
+      - 'users-api/**'
+      - 'log-message-processor/**'
+      - 'docker-compose.yml'
+      - '.env'
+      - 'traefik/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - 'auth-api/**'
+      - 'todos-api/**'
+      - 'users-api/**'
+      - 'log-message-processor/**'
+      - 'docker-compose.yml'
+      - '.env'
+      - 'traefik/**'
+  workflow_dispatch:
 
 jobs:
-  prepare-deployment:
+  check-infrastructure:
+    name: Check Infrastructure Status
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    outputs:
+      server_exists: ${{ steps.check.outputs.server_exists }}
+      server_ip: ${{ steps.check.outputs.server_ip }}
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Check if server exists
+      id: check
+      run: |
+        # Check if EC2 instance exists with our tag
+        instance_info=$(aws ec2 describe-instances \
+          --filters "Name=tag:Name,Values=devops-stage-6-server" "Name=instance-state-name,Values=running" \
+          --query 'Reservations[*].Instances[*].[PublicIpAddress,InstanceId]' \
+          --output text)
+        
+        if [ -n "$instance_info" ] && [ "$instance_info" != "None" ]; then
+          server_ip=$(echo $instance_info | awk '{print $1}')
+          instance_id=$(echo $instance_info | awk '{print $2}')
+          echo "server_exists=true" >> $GITHUB_OUTPUT
+          echo "server_ip=$server_ip" >> $GITHUB_OUTPUT
+          echo "Server found: $instance_id with IP $server_ip"
+        else
+          echo "server_exists=false" >> $GITHUB_OUTPUT
+          echo "No running server found with tag devops-stage-6-server"
+        fi
+
+  prepare-deployment:
+    needs: check-infrastructure
+    if: needs.check-infrastructure.outputs.server_exists == 'true'
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -25,6 +80,7 @@ jobs:
         cp -r users-api deploy/
         cp -r log-message-processor deploy/
         cp -r traefik deploy/
+        cp -r nginx deploy/
         cp docker-compose.yml deploy/
         cp .env deploy/
         
@@ -39,9 +95,9 @@ jobs:
         retention-days: 1
 
   deploy:
-    needs: prepare-deployment
+    needs: [check-infrastructure, prepare-deployment]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.check-infrastructure.outputs.server_exists == 'true'
     
     steps:
     - name: Download deployment package
@@ -121,9 +177,31 @@ jobs:
           # Build and deploy (try docker-compose first, fallback to docker compose)
           sudo docker-compose up -d --build --remove-orphans || sudo docker compose up -d --build --remove-orphans
          
-          # Health check
+          # Health check - test both nginx and traefik
           sleep 30
-          curl -f https://www.prod.chickenkiller.com || curl -f http://localhost:8080 || echo "Health check failed but continuing..."
+          
+          echo "=== Health Check Results ==="
+          echo "Docker containers:"
+          sudo docker ps -a
+          
+          echo "Nginx proxy test (port 80):"
+          curl -f http://localhost/ || echo "Nginx proxy health check failed"
+          
+          echo "Nginx proxy test (port 8080):"
+          curl -f http://localhost:8080/ || echo "Nginx alternative port check failed"
+          
+          echo "Frontend direct test:"
+          curl -f http://localhost:8080/ || echo "Frontend direct check failed"
+          
+          echo "API endpoints via nginx:"
+          curl -f http://localhost/api/auth/ || echo "Auth API via nginx failed"
+          curl -f http://localhost/api/todos/ || echo "Todos API via nginx failed"  
+          curl -f http://localhost/api/users/ || echo "Users API via nginx failed"
+          
+          echo "Traefik dashboard:"
+          curl -f http://localhost:9080/ || echo "Traefik dashboard check failed"
+          
+          echo "External HTTPS check:"
+          curl -f https://www.prod.chickenkiller.com || echo "External HTTPS check failed"
           
           echo "Deployment completed successfully!"
-          sudo docker ps -a

@@ -1,0 +1,235 @@
+name: Infrastructure Management
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'infra/terraform/**'
+      - 'infra/ansible/**'
+      - '.github/workflows/infrastructure.yml'
+  workflow_dispatch:
+
+env:
+  TF_VAR_notification_email: ${{ secrets.NOTIFICATION_EMAIL }}
+
+jobs:
+  plan:
+    name: Terraform Plan & Drift Detection
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+      plan_output: ${{ steps.plan.outputs.plan_output }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+        terraform_wrapper: false
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Terraform Init
+      run: |
+        cd infra/terraform
+        terraform init
+
+    - name: Terraform Plan
+      id: plan
+      run: |
+        cd infra/terraform
+        terraform plan -detailed-exitcode -out=tfplan.out | tee plan.txt
+        
+        # Capture exit code: 0=no changes, 1=error, 2=changes
+        exit_code=$?
+        echo "plan_exit_code=$exit_code" >> $GITHUB_OUTPUT
+        
+        if [ $exit_code -eq 2 ]; then
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "🚨 INFRASTRUCTURE DRIFT DETECTED!" >> plan_summary.txt
+          echo "" >> plan_summary.txt
+          cat plan.txt >> plan_summary.txt
+        elif [ $exit_code -eq 0 ]; then
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "✅ No infrastructure changes required" >> plan_summary.txt
+        else
+          echo "❌ Terraform plan failed" >> plan_summary.txt
+          exit 1
+        fi
+        
+        # Store plan output
+        plan_content=$(cat plan_summary.txt)
+        echo "plan_output<<EOF" >> $GITHUB_OUTPUT
+        echo "$plan_content" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Upload plan artifact
+      if: steps.plan.outputs.has_changes == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-plan
+        path: |
+          infra/terraform/tfplan.out
+          infra/terraform/plan.txt
+        retention-days: 7
+
+    - name: Send drift notification email
+      if: steps.plan.outputs.has_changes == 'true'
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: "🚨 Infrastructure Drift Detected - DevOps Stage 6"
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: "DevOps Pipeline <${{ secrets.SMTP_USERNAME }}>"
+        body: |
+          Infrastructure drift has been detected in the DevOps Stage 6 project.
+          
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          Triggered by: ${{ github.actor }}
+          
+          Plan Summary:
+          ${{ steps.plan.outputs.plan_output }}
+          
+          Action Required:
+          - Review the changes in the GitHub Actions workflow
+          - Approve the deployment if changes are expected
+          - Visit: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          The deployment is paused and waiting for manual approval.
+
+  approval:
+    name: Manual Approval for Infrastructure Changes
+    needs: plan
+    if: needs.plan.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    environment: production-infrastructure
+    
+    steps:
+    - name: Display plan summary
+      run: |
+        echo "Infrastructure changes detected:"
+        echo "${{ needs.plan.outputs.plan_output }}"
+        echo ""
+        echo "Please review the changes above and approve if they are expected."
+
+  apply:
+    name: Terraform Apply
+    needs: [plan, approval]
+    if: always() && needs.plan.result == 'success' && (needs.approval.result == 'success' || needs.plan.outputs.has_changes == 'false')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+        terraform_wrapper: false
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Setup Ansible
+      run: |
+        pip3 install ansible
+        ansible --version
+
+    - name: Download plan artifact
+      if: needs.plan.outputs.has_changes == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: terraform-plan
+        path: infra/terraform/
+
+    - name: Terraform Init
+      run: |
+        cd infra/terraform
+        terraform init
+
+    - name: Terraform Apply
+      run: |
+        cd infra/terraform
+        if [ "${{ needs.plan.outputs.has_changes }}" == "true" ]; then
+          terraform apply -auto-approve tfplan.out
+        else
+          echo "No changes to apply"
+          terraform refresh
+        fi
+
+    - name: Get infrastructure outputs
+      id: outputs
+      run: |
+        cd infra/terraform
+        server_ip=$(terraform output -raw server_public_ip)
+        echo "server_ip=$server_ip" >> $GITHUB_OUTPUT
+        echo "Deployed server IP: $server_ip"
+
+    - name: Send success notification
+      if: success()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: "✅ Infrastructure Deployment Complete - DevOps Stage 6"
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: "DevOps Pipeline <${{ secrets.SMTP_USERNAME }}>"
+        body: |
+          Infrastructure deployment has completed successfully!
+          
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          
+          Server Details:
+          - Public IP: ${{ steps.outputs.outputs.server_ip }}
+          - Domain: www.prod.chickenkiller.com
+          
+          Services should be available at:
+          - Application: https://www.prod.chickenkiller.com
+          - Traefik Dashboard: http://${{ steps.outputs.outputs.server_ip }}:9080
+          
+          View logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    - name: Send failure notification
+      if: failure()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: "❌ Infrastructure Deployment Failed - DevOps Stage 6"
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: "DevOps Pipeline <${{ secrets.SMTP_USERNAME }}>"
+        body: |
+          Infrastructure deployment has failed!
+          
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
+          Commit: ${{ github.sha }}
+          
+          Please check the workflow logs for details:
+          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          Immediate action may be required to restore services.

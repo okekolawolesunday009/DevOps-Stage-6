@@ -1,13 +1,14 @@
-# Build stage - use Java 8
-FROM maven:3.9-eclipse-temurin-8 AS builder
+FROM maven:3.8.6-openjdk-11 AS build
 WORKDIR /app
+
 COPY pom.xml .
-RUN mvn dependency:go-offline
 COPY src ./src
-RUN mvn clean package -DskipTests
-# Runtime stage - use Java 8 JRE
-FROM eclipse-temurin:8-jre-alpine
+
+RUN mvn package -DskipTests 
+
+FROM amazoncorretto:8
 WORKDIR /app
-COPY --from=builder /app/target/*.jar app.jar
+
+COPY --from=builder /app/target/*.jar ./users-api.jar
 EXPOSE 8083
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["java", "-jar", "users-api.jar"]

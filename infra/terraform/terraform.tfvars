@@ -1,0 +1,6 @@
+aws_region              = "us-east-1" 
+ec2_key            = "~/.ssh/id_ed25519.pub"
+projectname             = "epicbook"
+ami                     = "ami-0bbdd8c17ed981ef9" 
+domain                  = "prod.chciken.killer.com"
+ssh_private_key_path    = "~/.ssh/id_ed25519"

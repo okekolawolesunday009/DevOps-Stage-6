@@ -1,116 +1,71 @@
 ---
-- name: Check if application repository exists
-  stat:
-    path: "{{ app_directory }}/.git"
-  register: repo_exists
+# --- NEW: Wait for SSH connection ---
+- name: Wait for SSH connection to be established
+  ansible.builtin.wait_for_connection:
+    timeout: 120
+    delay: 10
 
-- name: Clone application repository
-  git:
-    repo: "{{ github_repo }}"
-    dest: "{{ app_directory }}"
-    version: main
-    force: yes
-  when: not repo_exists.stat.exists
-  become_user: "{{ ansible_user }}"
-
-- name: Pull latest changes from repository
-  git:
-    repo: "{{ github_repo }}"
-    dest: "{{ app_directory }}"
-    version: main
-    force: yes
-  become_user: "{{ ansible_user }}"
-  register: git_pull_result
-
-- name: Get current running containers
-  command: docker ps --format "table {{.Names}}\t{{.Status}}"
-  register: running_containers
-  changed_when: false
-
-- name: Backup current deployment
-  command: >
-    cp -r {{ app_directory }} /opt/backups/devops-app-{{ ansible_date_time.epoch }}
-  when: git_pull_result.changed
-  ignore_errors: yes
-
-- name: Set proper permissions for application directory
-  file:
-    path: "{{ app_directory }}"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    recurse: yes
+# --- Ensure app directory exists ---
+- name: Ensure app directory exists
+  ansible.builtin.file:
+    path: /opt/todo-app
+    state: directory
+    owner: "{{ ansible_user | default('ubuntu') }}"
+    group: "{{ ansible_user | default('ubuntu') }}"
     mode: '0755'
+  become: yes
 
-- name: Check if docker-compose.yml exists
-  stat:
-    path: "{{ app_directory }}/{{ docker_compose_file }}"
-  register: compose_file
+# --- Clone the repository (or pull latest) ---
+- name: Clone repo (or pull latest)
+  ansible.builtin.git:
+    repo: 'https://github.com/donhasmo/DevOps-Stage-6.git'
+    dest: /opt/todo-app
+    version: main
+    force: yes
+    update: yes
+  become: yes
 
-- name: Fail if docker-compose.yml not found
-  fail:
-    msg: "Docker Compose file not found at {{ app_directory }}/{{ docker_compose_file }}"
-  when: not compose_file.stat.exists
+# --- Ensure Traefik ACME directory and acme.json exist with correct permissions ---
+- name: Ensure Traefik ACME directory exists on host
+  ansible.builtin.file:
+    path: /opt/todo-app/letsencrypt
+    state: directory
+    owner: "{{ ansible_user | default('ubuntu') }}"
+    group: "{{ ansible_user | default('ubuntu') }}"
+    mode: '0755'
+  become: yes
 
-- name: Stop existing containers if code changed
-  command: docker-compose down
+- name: Ensure acme.json exists with 0600 permissions
+  ansible.builtin.file:
+    path: /opt/todo-app/letsencrypt/acme.json
+    state: touch
+    owner: "{{ ansible_user | default('ubuntu') }}"
+    group: "{{ ansible_user | default('ubuntu') }}"
+    mode: '0600'
+  become: yes
+
+- name: setup ssl cert
+  become: true
+  shell: |
+    curl "https://www.duckdns.org/update?domains=hasmo.duckdns.org&token=e0d700ef-4b13-4244-9b54-2601055f0eb0&ip={{ ansible_host }}"
+
+
+# --- Start / update containers idempotently ---
+- name: Bring up services idempotently without hanging
+  community.docker.docker_compose_v2:
+    project_src: /opt/todo-app
+    build: missing      # only build if no image exists
+    pull: missing       # only pull if image not present
+    state: present
+    recreate: smart     # recreate only if compose or Dockerfiles changed
+    # timeout: 120
+  become: yes
+  
+
+- name: Start application with Docker Compose
+  become: true
+  shell: |
+    cd /opt/todo-app/ && docker compose up -d
   args:
-    chdir: "{{ app_directory }}"
-  become_user: "{{ ansible_user }}"
-  when: git_pull_result.changed
-  ignore_errors: yes
-
-- name: Pull latest Docker images
-  command: docker-compose pull
-  args:
-    chdir: "{{ app_directory }}"
-  become_user: "{{ ansible_user }}"
-  when: git_pull_result.changed
-
-- name: Build and start services
-  command: docker-compose up -d --build --remove-orphans
-  args:
-    chdir: "{{ app_directory }}"
-  become_user: "{{ ansible_user }}"
-  register: compose_up_result
-
-- name: Wait for services to start
-  pause:
-    seconds: 30
-  when: compose_up_result.changed
-
-- name: Check service health
-  uri:
-    url: "http://localhost:8080"
-    method: GET
-    status_code: [200, 302, 404]  # Accept various status codes
-  register: health_check
-  retries: 5
-  delay: 10
-  ignore_errors: yes
-
-- name: Clean up old Docker images
-  command: docker image prune -f
-  become_user: "{{ ansible_user }}"
-  when: git_pull_result.changed
-
-- name: Display running containers
-  command: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-  register: final_containers
-  changed_when: false
-
-- name: Show deployment status
-  debug:
-    msg: 
-      - "Deployment completed successfully!"
-      - "Git changes: {{ 'Yes' if git_pull_result.changed else 'No' }}"
-      - "Services restarted: {{ 'Yes' if compose_up_result.changed else 'No' }}"
-      - "Health check: {{ 'Passed' if health_check.status == 200 else 'Warning' }}"
-      - "Running containers:"
-      - "{{ final_containers.stdout }}"
-
-- name: Create deployment log
-  lineinfile:
-    path: "{{ app_directory }}/deployment.log"
-    line: "{{ ansible_date_time.iso8601 }}: Deployment completed - Git changed: {{ git_pull_result.changed }}, Services restarted: {{ compose_up_result.changed }}"
-    create: yes
-  become_user: "{{ ansible_user }}"
+    executable: /bin/bash
+  

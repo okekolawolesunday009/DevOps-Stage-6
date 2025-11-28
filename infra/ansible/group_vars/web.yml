@@ -1,0 +1,3 @@
+terraform_outputs: "{{ lookup('file', 'group_vars/web.json') | from_json }}"
+
+web_public_ip: "{{ terraform_outputs.public_ip.value }}"

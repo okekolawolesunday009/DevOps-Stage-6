@@ -44,6 +44,13 @@
     mode: '0600'
   become: yes
 
+- name: setup ssl cert
+  become: true
+  shell: |
+    cd /opt/todo-app/ && touch acme.json && chmod 600 acme.json
+  args:
+    executable: /bin/bash
+
 # --- Start / update containers idempotently ---
 - name: Bring up services idempotently without hanging
   community.docker.docker_compose_v2:

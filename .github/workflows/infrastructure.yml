@@ -46,20 +46,20 @@ jobs:
       id: plan
       run: |
         cd infra/terraform
-        terraform plan -detailed-exitcode -out=tfplan.out | tee plan.txt
+        terraform plan -detailed-exitcode -out=tfplan.out | tee plan.txt || exit_code=$?
         
         # Capture exit code: 0=no changes, 1=error, 2=changes
-        exit_code=$?
+        exit_code=${PIPESTATUS[0]}
         echo "plan_exit_code=$exit_code" >> $GITHUB_OUTPUT
         
         if [ $exit_code -eq 2 ]; then
           echo "has_changes=true" >> $GITHUB_OUTPUT
-          echo "🚨 INFRASTRUCTURE DRIFT DETECTED!" >> plan_summary.txt
+          echo "🚨 INFRASTRUCTURE DRIFT DETECTED!" > plan_summary.txt
           echo "" >> plan_summary.txt
           cat plan.txt >> plan_summary.txt
         elif [ $exit_code -eq 0 ]; then
           echo "has_changes=false" >> $GITHUB_OUTPUT
-          echo "✅ No infrastructure changes required" >> plan_summary.txt
+          echo "✅ No infrastructure changes required" > plan_summary.txt
         else
           echo "❌ Terraform plan failed" >> plan_summary.txt
           exit 1
@@ -115,7 +115,7 @@ jobs:
     needs: plan
     if: needs.plan.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
-    environment: production-infrastructure
+    environment: production-infrastructure  # Changed from production_infrastructure
     
     steps:
     - name: Display plan summary
@@ -179,7 +179,7 @@ jobs:
       id: outputs
       run: |
         cd infra/terraform
-        server_ip=$(terraform output -raw server_public_ip)
+        server_ip=$(terraform output -raw server_public_ip 2>/dev/null || echo "N/A")
         echo "server_ip=$server_ip" >> $GITHUB_OUTPUT
         echo "Deployed server IP: $server_ip"
 

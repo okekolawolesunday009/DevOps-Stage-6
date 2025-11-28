@@ -2,7 +2,7 @@ name: Application Deployment
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev ]
     paths:
       - 'frontend/**'
       - 'auth-api/**'
@@ -13,7 +13,7 @@ on:
       - '.env'
       - 'traefik/**'
   pull_request:
-    branches: [ main ]
+    branches: [ dev ]
     paths:
       - 'frontend/**'
       - 'auth-api/**'

@@ -37,8 +37,21 @@ jobs:
         else
           echo "Warning: nginx directory not found, skipping"
         fi
-        cp docker-compose.yml deploy/
-        cp .env deploy/
+        # Copy docker-compose file (support both .yml and .yaml)
+        if [ -f docker-compose.yml ]; then
+          cp docker-compose.yml deploy/
+        elif [ -f docker-compose.yaml ]; then
+          cp docker-compose.yaml deploy/
+        else
+          echo "Warning: docker-compose file not found (tried docker-compose.yml and docker-compose.yaml), skipping"
+        fi
+
+        # Copy .env only if present
+        if [ -f .env ]; then
+          cp .env deploy/
+        else
+          echo "Warning: .env not found, skipping"
+        fi
         
         # Create archive
         tar -czf deployment.tar.gz deploy/

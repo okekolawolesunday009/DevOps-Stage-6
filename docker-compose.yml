@@ -11,9 +11,7 @@ services:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
 
-      # Redirect HTTP → HTTPS
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      # (Local testing) -- removed global HTTP -> HTTPS redirect so localhost HTTP works
 
       # ACME SSL
       - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
@@ -60,6 +58,10 @@ services:
       - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
       - "traefik.http.middlewares.auth-strip.stripprefix.prefixes=/api/auth"
       - "traefik.http.routers.auth-api.middlewares=auth-strip"
+      # Local HTTP router for testing on localhost
+      - "traefik.http.routers.auth-api-local.rule=Host(`localhost`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth-api-local.entrypoints=web"
+      - "traefik.http.routers.auth-api-local.middlewares=auth-strip"
 
   todos-api:
     image: okekolawoles36/todo-api:latest
@@ -73,6 +75,10 @@ services:
       - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
       - "traefik.http.middlewares.todos-strip.stripprefix.prefixes=/api/todos"
       - "traefik.http.routers.todos-api.middlewares=todos-strip"
+      # Local HTTP router for testing on localhost
+      - "traefik.http.routers.todos-api-local.rule=Host(`localhost`) && PathPrefix(`/api/todos`)"
+      - "traefik.http.routers.todos-api-local.entrypoints=web"
+      - "traefik.http.routers.todos-api-local.middlewares=todos-strip"
 
   users-api:
     image: okekolawoles36/users-api:latest
@@ -86,9 +92,14 @@ services:
       - "traefik.http.services.users-api.loadbalancer.server.port=8083"
       - "traefik.http.middlewares.users-strip.stripprefix.prefixes=/api/users"
       - "traefik.http.routers.users-api.middlewares=users-strip"
+      # Local HTTP router for testing on localhost
+      - "traefik.http.routers.users-api-local.rule=Host(`localhost`) && PathPrefix(`/api/users`)"
+      - "traefik.http.routers.users-api-local.entrypoints=web"
+      - "traefik.http.routers.users-api-local.middlewares=users-strip"
 
   frontend:
     image: okekolawoles36/frontend:latest
+    container_name: frontend
     networks:
       - app-network
     labels:
@@ -96,7 +107,12 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`prod.chickenkiller.com`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=myresolver"
-      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      # Local HTTP , router so you can use http://localhost:8080 for testing
+      #test
+      - "traefik.http.routers.frontend-local.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend-local.entrypoints=web"
+      - "traefik.http.routers.frontend-local.priority=10"
 
 networks:
   app-network:

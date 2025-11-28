@@ -42,8 +42,19 @@ jobs:
         cp -r todos-api deploy/
         cp -r users-api deploy/
         cp -r log-message-processor deploy/
-        cp -r traefik deploy/
-        cp -r nginx deploy/
+        # Copy traefik config only if the directory exists (some setups don't include traefik files)
+        if [ -d traefik ]; then
+          cp -r traefik deploy/
+        else
+          echo "Warning: traefik directory not found, skipping"
+        fi
+
+        # Copy nginx config only if the directory exists
+        if [ -d nginx ]; then
+          cp -r nginx deploy/
+        else
+          echo "Warning: nginx directory not found, skipping"
+        fi
         cp docker-compose.yml deploy/
         cp .env deploy/
         

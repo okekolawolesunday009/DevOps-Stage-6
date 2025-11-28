@@ -1,0 +1,142 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik:latest
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      # - "--entrypoints.websecure.address=:443"
+      # - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      # - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # - "--certificatesresolvers.myresolver.acme.httpChallenge.entryPoint=web"
+      # - "--certificatesresolvers.myresolver.acme.httpChallenge=true"
+      # - "--certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}"
+      # - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      # - "443:443"
+      - "8088:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # - traefik_acme:/letsencrypt
+    restart: unless-stopped
+    networks:
+      - web
+
+  frontend:
+    build: ./frontend
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      # - "traefik.http.routers.frontend.tls=true"
+      # - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
+      # - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      # - "traefik.http.routers.frontend.tls.certresolver=myresolver"
+    env_file:
+      - .env
+    depends_on:
+      - auth-api
+      - todos-api
+    ports:
+      - "8080:8080"
+    networks:
+      - web
+      - backend
+
+  auth-api:
+    build: ./auth-api
+    ports:
+      - "8081:8081"
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.auth.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/auth/`)"
+      - "traefik.http.routers.auth.rule=Host(`localhost`) && PathPrefix(`/api/auth/`)"
+      # - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.middlewares.strip-auth.stripprefix.prefixes=/api/auth"
+      - "traefik.http.routers.auth.middlewares=strip-auth"
+      - "traefik.http.services.auth.loadbalancer.server.port=8081"
+      # - "traefik.http.routers.auth.tls.certresolver=myresolver"
+    env_file:
+      - .env
+    depends_on:
+      - users-api
+    networks:
+      - web
+      - backend
+
+  todos-api:
+    build: ./todos-api
+    ports:
+      - "8082:8082"
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.todos.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/todos/`)"
+      - "traefik.http.routers.todos.rule=Host(`localhost`) && PathPrefix(`/api/todos/`)"
+      # - "traefik.http.routers.todos.entrypoints=websecure"
+      - "traefik.http.routers.todos.entrypoints=web"
+      - "traefik.http.middlewares.strip-todos.stripprefix.prefixes=/api/todos"
+      - "traefik.http.routers.todos.middlewares=strip-todos"
+      - "traefik.http.services.todos.loadbalancer.server.port=8082"
+      # - "traefik.http.routers.todos.tls.certresolver=myresolver"
+    env_file:
+      - .env
+    depends_on:
+      - redis-queue
+    networks:
+      - web
+      - backend
+
+  users-api:
+    build: ./users-api
+    ports:
+      - "8083:8083"
+    labels:
+      - "traefik.enable=true"
+      # - "traefik.http.routers.users.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/users/`)"
+      - "traefik.http.routers.users.rule=Host(`localhost`) && PathPrefix(`/api/users/`)"
+      # - "traefik.http.routers.users.entrypoints=websecure"
+      - "traefik.http.routers.users.entrypoints=web"
+      - "traefik.http.middlewares.strip-users.stripprefix.prefixes=/api/users"
+      - "traefik.http.routers.users.middlewares=strip-users"
+      - "traefik.http.services.users.loadbalancer.server.port=8083"
+      # - "traefik.http.routers.users.tls.certresolver=myresolver"
+    env_file:
+      - .env
+    networks:
+      - web
+      - backend
+
+  log-message-processor:
+    build: ./log-message-processor
+    env_file:
+      - .env
+    depends_on:
+      - redis-queue
+    networks:
+      - backend
+    # expose:
+    #   - "9000"
+
+  redis-queue:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    networks:
+      - backend
+
+volumes:
+  traefik_acme:
+  redis_data:
+
+networks:
+  web:
+  backend:

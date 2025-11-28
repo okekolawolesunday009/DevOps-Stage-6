@@ -1,25 +1,8 @@
-FROM python:3.11-slim
+FROM python:3.8
 
 WORKDIR /app
-
-# Install build dependencies for compiling packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        python3-dev \
-        gcc \
-        libffi-dev \
-        && rm -rf /var/lib/apt/lists/*
-
-# Upgrade pip
-RUN pip install --upgrade pip
-
-# Install Python dependencies
-COPY requirements.txt ./
+COPY requirements.txt .
+RUN apt-get update && apt-get install -y gcc python3-dev
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the application code
 COPY . .
-
-# Command to run the app
 CMD ["python", "main.py"]

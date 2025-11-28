@@ -32,6 +32,6 @@ variable "ec2_key" {
 #     type = string  
 # }
 variable "ssh_private_key_path" {
-  default = "~/.ssh/id_ed25519"
+  default = "~/.ssh/id_rsa"
   type = string
 }

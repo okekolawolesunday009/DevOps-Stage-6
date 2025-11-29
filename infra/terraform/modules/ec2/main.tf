@@ -10,7 +10,7 @@ resource "aws_instance" "my_ec2" {
 
 locals {
   # If `ec2_key_content` is provided (e.g. via CI secret), use it; otherwise read file path from `ec2_key`.
-  public_key = length(trim(var.ec2_key_content)) > 0 ? var.ec2_key_content : file(pathexpand(var.ec2_key))
+  public_key = length(trimspace(var.ec2_key_content)) > 0 ? var.ec2_key_content : file(pathexpand(var.ec2_key))
 }
 
 resource "aws_key_pair" "local_key" {

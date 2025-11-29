@@ -2,7 +2,15 @@ name: Application Deployment
 
 on:
   push:
+    paths:
+      - 'frontend/**'
+      - 'auth-api/**'
+      - 'todos-api/**'
+      - 'users-api/**'
+      - 'log-message-processor/**'
+      - 'docker-compose.yaml'
     branches: [ main ]
+   
 
 jobs:
   prepare-deployment:

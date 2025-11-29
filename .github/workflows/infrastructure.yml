@@ -41,7 +41,7 @@ jobs:
           echo "has-changes=$?" >> $GITHUB_OUTPUT
           
       - name: Upload Plan
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
           path: infra/terraform/tfplan

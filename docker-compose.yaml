@@ -35,10 +35,8 @@ services:
       - web
 
   frontend:
+    image: okekolawoles36/frontend:latest
     container_name: frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`www.prod.chickenkiller.com`)"
@@ -59,9 +57,7 @@ services:
 
   auth-api:
     container_name: auth-api
-    build:
-      context: ./auth-api
-      dockerfile: Dockerfile
+    image: okekolawoles36/auth-api:latest
     ports:
       - "8081:8081"
     labels:
@@ -83,9 +79,7 @@ services:
 
   todos-api:
     container_name: todos-api
-    build:
-      context: ./todos-api
-      dockerfile: Dockerfile
+    image: okekolawoles36/todos-api:latest
     ports:
       - "8082:8082"
     labels:
@@ -107,9 +101,7 @@ services:
 
   users-api:
     container_name: users-api
-    build:
-      context: ./users-api
-      dockerfile: Dockerfile
+    image: okekolawoles36/users-api:latest
     ports:
       - "8083:8083"
     labels:
@@ -129,9 +121,7 @@ services:
 
   log-message-processor:
     container_name: log-message-processor
-    build:
-      context: ./log-message-processor
-      dockerfile: Dockerfile
+    image: okekolawoles36/log-message-processor:latest
     env_file:
       - .env
     depends_on:

@@ -17,7 +17,7 @@ jobs:
 
     - name: Create deployment package
       run: |
-        # Create deployment directory with all source code
+        # Create deployment directory with all source code.
         mkdir -p deploy
         cp -r frontend deploy/
         cp -r auth-api deploy/

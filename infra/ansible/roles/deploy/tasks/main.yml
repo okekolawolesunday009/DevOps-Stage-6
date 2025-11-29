@@ -18,7 +18,7 @@
 # --- Clone the repository (or pull latest) ---
 - name: Clone repo (or pull latest)
   ansible.builtin.git:
-    repo: 'https://github.com/donhasmo/DevOps-Stage-6.git'
+    repo: 'https://github.com/okekolawolesunday009/DevOps-Stage-6.git'
     dest: /opt/todo-app
     version: main
     force: yes
@@ -47,8 +47,9 @@
 - name: setup ssl cert
   become: true
   shell: |
-    curl "https://www.duckdns.org/update?domains=hasmo.duckdns.org&token=e0d700ef-4b13-4244-9b54-2601055f0eb0&ip={{ ansible_host }}"
-
+    cd /opt/todo-app/ && touch acme.json && chmod 600 acme.json
+  args:
+    executable: /bin/bash
 
 # --- Start / update containers idempotently ---
 - name: Bring up services idempotently without hanging

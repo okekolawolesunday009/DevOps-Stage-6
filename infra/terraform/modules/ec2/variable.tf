@@ -28,6 +28,12 @@ variable "ec2_key" {
     type = string  
 }
 
+variable "ec2_key_content" {
+  type        = string
+  description = "Optional public key contents. If set, this string will be used as the public key for aws_key_pair. If empty, the file at var.ec2_key will be read."
+  default     = ""
+}
+
 # variable "public_ip" {
 #     type = string  
 # }

@@ -8,10 +8,14 @@ resource "aws_instance" "my_ec2" {
   tags                   = var.tags
 }
 
+locals {
+  # If `ec2_key_content` is provided (e.g. via CI secret), use it; otherwise read file path from `ec2_key`.
+  public_key = length(trim(var.ec2_key_content)) > 0 ? var.ec2_key_content : file(pathexpand(var.ec2_key))
+}
+
 resource "aws_key_pair" "local_key" {
   key_name   = "local-key"
-  # Use pathexpand() to resolve ~ (home directory) in the file path
-  public_key = file(pathexpand(var.ec2_key))
+  public_key = local.public_key
 }
 
 

@@ -8,7 +8,7 @@
 # --- Ensure app directory exists ---
 - name: Ensure app directory exists
   ansible.builtin.file:
-    path: /opt/todo-app
+    path: /opt/devops-app
     state: directory
     owner: "{{ ansible_user | default('ubuntu') }}"
     group: "{{ ansible_user | default('ubuntu') }}"
@@ -19,7 +19,7 @@
 - name: Clone repo (or pull latest)
   ansible.builtin.git:
     repo: 'https://github.com/okekolawolesunday009/DevOps-Stage-6.git'
-    dest: /opt/todo-app
+    dest: /opt/devops-app
     version: main
     force: yes
     update: yes
@@ -28,7 +28,7 @@
 # --- Ensure Traefik ACME directory and acme.json exist with correct permissions ---
 - name: Ensure Traefik ACME directory exists on host
   ansible.builtin.file:
-    path: /opt/todo-app/letsencrypt
+    path: /opt/devops-app/letsencrypt
     state: directory
     owner: "{{ ansible_user | default('ubuntu') }}"
     group: "{{ ansible_user | default('ubuntu') }}"
@@ -37,7 +37,7 @@
 
 - name: Ensure acme.json exists with 0600 permissions
   ansible.builtin.file:
-    path: /opt/todo-app/letsencrypt/acme.json
+    path: /opt/devops-app/letsencrypt/acme.json
     state: touch
     owner: "{{ ansible_user | default('ubuntu') }}"
     group: "{{ ansible_user | default('ubuntu') }}"
@@ -47,14 +47,14 @@
 - name: setup ssl cert
   become: true
   shell: |
-    cd /opt/todo-app/ && touch acme.json && chmod 600 acme.json
+    cd /opt/devops-app/ && touch acme.json && chmod 600 acme.json
   args:
     executable: /bin/bash
 
 # --- Start / update containers idempotently ---
 - name: Bring up services idempotently without hanging
   community.docker.docker_compose_v2:
-    project_src: /opt/todo-app
+    project_src: /opt/devops-app
     build: missing      # only build if no image exists
     pull: missing       # only pull if image not present
     state: present
@@ -66,7 +66,7 @@
 - name: Start application with Docker Compose
   become: true
   shell: |
-    cd /opt/todo-app/ && docker compose up -d
+    cd /opt/devops-app/ && docker compose up -d
   args:
     executable: /bin/bash
   

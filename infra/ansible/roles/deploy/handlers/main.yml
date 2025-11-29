@@ -1,7 +1,7 @@
 ---
 - name: restart docker-compose
   community.docker.docker_compose_v2:
-    project_src: /opt/todo-app
+    project_src: /opt/devops-app
     state: present
     recreate: false
   become: yes

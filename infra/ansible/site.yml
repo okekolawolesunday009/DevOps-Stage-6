@@ -1,7 +1,0 @@
-- hosts: web
-  become: yes
-  vars:
-    repo_url: "https://github.com/okekolawolesunday009/DevOps-Stage-6.git"
-  roles:
-    - dependencies
-    - deploy

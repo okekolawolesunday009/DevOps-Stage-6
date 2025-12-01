@@ -1,4 +1,3 @@
 redis==2.10.6
-py_zipkin>=0.20.0
-thriftpy2>=0.4.0
 requests
+py-zipkin>=1.2.0

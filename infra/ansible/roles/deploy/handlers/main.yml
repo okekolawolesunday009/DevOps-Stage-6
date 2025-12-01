@@ -1,7 +1,6 @@
 ---
-- name: restart docker-compose
-  community.docker.docker_compose_v2:
-    project_src: /opt/devops-app
-    state: present
-    recreate: false
-  become: yes
+- name: Restart Docker containers
+  command: docker compose restart
+  args:
+    chdir: "{{ app_dir }}"
+  become_user: ubuntu

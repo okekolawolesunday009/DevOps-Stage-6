@@ -1,13 +1,15 @@
+# Node.js Todos API
 FROM node:18-alpine
 
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
-RUN npm install 
+RUN npm ci --only=production
 
+# Copy source
 COPY . .
 
 EXPOSE 8082
 
-# Use the app’s declared start script
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

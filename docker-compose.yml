@@ -1,0 +1,157 @@
+services:
+
+   # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      # - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=okekolawoles36@gmail.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--api.dashboard=true"
+
+    ports:
+      - "80:80"      
+      - "443:443"    
+      - "8080:8080"  
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-queue
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  auth-api:
+    image: gerald22/auth-api:latest
+    container_name: auth-api
+    restart: unless-stopped
+    # ports:
+    #   - "8081:8081"
+    environment:
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - JWT_SECRET=myfancysecret
+      - AUTH_API_PORT=8081
+      - USERS_API_ADDRESS=http://users-api:8083
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-api.rule=Host(`kolawole.chickenkiller.com`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.auth-api.entrypoints=websecure"
+      - "traefik.http.routers.auth-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
+
+  todos-api:
+    image: gerald22/todo-api:latest
+    container_name: todos-api
+    restart: unless-stopped
+    # ports:
+    #   - "8082:8082"
+    environment:
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - AUTH_API_URL=http://auth-api:8081
+      - JWT_SECRET=myfancysecret
+      - REDIS_CHANNEL=log_channel
+    depends_on:
+      - redis
+      - auth-api
+    networks:
+      - app-network
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.todos-api.rule=Host(`kolawole.chickenkiller.com`) && PathPrefix(`/api/todos`)"
+      - "traefik.http.routers.todos-api.entrypoints=websecure"
+      - "traefik.http.routers.todos-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
+
+  users-api:
+    image: gerald22/user-api:latest
+    container_name: users-api
+    restart: unless-stopped
+    # ports:
+    #   - "8083:8083"
+    environment:
+      # - REDIS_HOST=redis
+      # - REDIS_PORT=6379
+      # - AUTH_API_URL=http://auth-api:8081
+      - SERVER_PORT=8083
+      - JWT_SECRET=myfancysecret
+    depends_on:
+      - redis
+      - auth-api
+    networks:
+      - app-network
+        
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.users-api.rule=Host(`kolawole.chickenkiller.com`) && PathPrefix(`/api/users`)"
+      - "traefik.http.routers.users-api.entrypoints=websecure"
+      - "traefik.http.routers.users-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.users-api.loadbalancer.server.port=8083"
+
+
+  log-processor:
+    image: gerald22/log-message-processor:latest
+    container_name: log-processor
+    environment:
+      - REDIS_HOST=redis-queue
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=log_channel
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  frontend:
+    image: gerald22/frontend:latest
+    container_name: frontend
+    # ports:
+    #   - "8080:80"
+    restart: unless-stopped
+    environment:
+      - AUTH_API_ADDRESS=https://kolawole.chickenkiller.com/api/auth
+      - TODOS_API_ADDRESS=https://kolawole.chickenkiller.com/api/todos
+    depends_on:
+      - auth-api
+      - todos-api
+      - users-api
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      
+      # ✅ For REMOTE (HTTPS):
+      - "traefik.http.routers.frontend.rule=Host(`kolawole.chickenkiller.com`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  traefik-certs:
+
+

@@ -5,7 +5,7 @@
   gather_facts: true
 
   vars:
-    app_dir: /opt/todo-app
+    app_dir: /opt/devops-app
     compose_file: docker-compose.yml
     domain: "kolawole.chickenkiller.com"
     acme_email: "kolawole.chickenkiller@gmail.com"

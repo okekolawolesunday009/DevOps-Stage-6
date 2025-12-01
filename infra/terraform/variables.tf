@@ -13,19 +13,19 @@ variable "instance_type" {
 variable "key_name" {
   description = "SSH key pair name"
   type        = string
-  default     = "devops-stage6-key"
+  default     = "id_rsa"
 }
 
 variable "public_key_path" {
   description = "Path to SSH public key"
   type        = string
-  default = "~/.ssh/devops_stage6.pub" 
+  default = "~/.ssh/id_rsa.pub" 
 }
 
 variable "private_key_path" {
   description = "Path to SSH private key"
   type        = string
-  default     = "~/.ssh/devops_stage6"
+  default     = "~/.ssh/id_rsa"
 }
 
 variable "domain" {

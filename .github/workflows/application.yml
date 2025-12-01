@@ -147,7 +147,7 @@ jobs:
           set -e
           
           echo "📂 Navigating to application directory..."
-          cd /opt/todo-app
+          cd /opt/devops-app
           
           echo "🧹 Discarding local changes..."
           git reset --hard HEAD
@@ -212,7 +212,7 @@ jobs:
       run: |
         echo "📋 Fetching recent logs..."
         ssh -i ~/.ssh/id_rsa ubuntu@$SERVER_IP << 'ENDSSH'
-          cd /opt/todo-app
+          cd /opt/devops-app
           echo "=== Container Status ==="
           docker compose ps
           echo ""
@@ -226,11 +226,11 @@ jobs:
       with:
         server_address: smtp.gmail.com
         server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
         subject: '✅ Application Deployed Successfully - kolawole.chickenkiller.com'
         to: ${{ secrets.NOTIFICATION_EMAIL }}
-        from: 'DevOps CI/CD <${{ secrets.EMAIL_USERNAME }}>'
+        from: 'DevOps CI/CD <${{ secrets.SMTP_USERNAME }}>'
         body: |
           ✅ APPLICATION DEPLOYMENT SUCCESSFUL
 
@@ -262,11 +262,11 @@ jobs:
       with:
         server_address: smtp.gmail.com
         server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
         subject: '❌ Application Deployment Failed - kolawole.chickenkiller.com'
         to: ${{ secrets.NOTIFICATION_EMAIL }}
-        from: 'DevOps CI/CD <${{ secrets.EMAIL_USERNAME }}>'
+        from: 'DevOps CI/CD <${{ secrets.SMTP_USERNAME }}>'
         body: |
           ❌ APPLICATION DEPLOYMENT FAILED
 
@@ -284,7 +284,7 @@ jobs:
 
           🔍 Debug steps:
           1. SSH into server: ssh ubuntu@${{ steps.get_ip.outputs.server_ip }}
-          2. Check logs: cd /opt/todo-app && docker compose logs
+          2. Check logs: cd /opt/devops-app && docker compose logs
           3. Check status: docker compose ps
 
   no-changes-detected:

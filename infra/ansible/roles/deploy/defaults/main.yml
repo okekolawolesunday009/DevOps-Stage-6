@@ -1,6 +1,6 @@
 ---
 # Application configuration
-app_dir: /opt/todo-app
+app_dir: /opt/devops-app
 app_repo: "{{ lookup('env', 'GITHUB_REPO') }}"
 app_branch: main
 

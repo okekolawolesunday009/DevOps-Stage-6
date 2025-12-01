@@ -29,7 +29,7 @@ data "aws_ami" "ubuntu" {
 
 
 resource "aws_security_group" "todo_app" {
-  name        = "todo-app-sg"
+  name        = "devops-app-sg"
   description = "Security group for TODO application"
 
   ingress {
@@ -76,7 +76,7 @@ resource "aws_security_group" "todo_app" {
   }
 
   tags = {
-    Name = "todo-app-sg"
+    Name = "devops-app-sg"
   }
 }
 
@@ -98,7 +98,7 @@ resource "aws_instance" "todo_server" {
   }
 
   tags = {
-    Name = "todo-app-server"
+    Name = "devops-app-server"
     description = "EC2 instance for TODO application"
   }
 

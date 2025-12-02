@@ -7,8 +7,8 @@
   vars:
     app_dir: /opt/devops-app
     compose_file: docker-compose.yml
-    domain: "kolawole.chickenkiller.com"
-    acme_email: "kolawole.chickenkiller@gmail.com"
+    domain: "prod.chickenkiller.com"
+    acme_email: "okekolawoles36@gmail.com"
     jwt_secret: "myfancysecret"
     app_repo: "https://github.com/okekolawolesunday009/DevOps-Stage-6.git"
 
@@ -32,5 +32,5 @@
       msg:
       - "✅ Deployment completed successfully!"
       - "Server IP: {{ ansible_default_ipv4.address }}"
-      - "Application URL: https://kolawole.chickenkiller.com"
+      - "Application URL: https://prod.chickenkiller.com"
       - "SSH: ssh -i ~/.ssh/id_rsa ubuntu@{{ ansible_default_ipv4.address }}"

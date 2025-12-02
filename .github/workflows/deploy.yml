@@ -45,11 +45,12 @@ jobs:
         # Copy docker-compose file (support both .yml and .yaml)
         if [ -f docker-compose.yml ]; then
           cp docker-compose.yml deploy/
-        elif [ -f docker-compose.yaml ]; then
-          cp docker-compose.yaml deploy/
         else
-          echo "Warning: docker-compose file not found (tried docker-compose.yml and docker-compose.yaml), skipping"
+          echo "ERROR: docker-compose.yml not found!"
+          exit 1
         fi
+        
+
 
         # Copy .env only if present
         if [ -f .env ]; then

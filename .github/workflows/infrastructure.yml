@@ -55,12 +55,12 @@ jobs:
         with:
           name: terraform-plan
           path: infra/terraform/tfplan
-        if: steps.plan.outputs.has-changes == '2'  # Only upload if changes detected
+        if: steps.plan.outputs.has-changes == 'true'  # Only upload if changes detected
 
   drift-notification:
     needs: terraform-plan
     runs-on: ubuntu-latest
-    if: needs.terraform-plan.outputs.has-changes == '2'
+    if: needs.terraform-plan.outputs.has-changes == 'true'
     steps:
       - name: Send Drift Detection Email
         uses: dawidd6/action-send-mail@v3
@@ -90,7 +90,7 @@ jobs:
   manual-approval:
     needs: [terraform-plan, drift-notification]
     runs-on: ubuntu-latest
-    if: needs.terraform-plan.outputs.has-changes == '2'
+    if: needs.terraform-plan.outputs.has-changes == 'true'
     environment: production-infrastructure
     steps:
       - name: Manual Approval Required
@@ -137,12 +137,12 @@ jobs:
         with:
           name: terraform-plan
           path: infra/terraform/
-        if: needs.terraform-plan.outputs.has-changes == '2'
+        if: needs.terraform-plan.outputs.has-changes == 'true'  # Only download if changes detected
           
       - name: Terraform Apply
         run: |
           cd infra/terraform
-          if [ "${{ needs.terraform-plan.outputs.has-changes }}" == "2" ]; then
+          if [ "${{ needs.terraform-plan.outputs.has-changes }}" == "true" ]; then
             terraform apply tfplan
           else
             terraform apply -auto-approve

@@ -1,6 +1,6 @@
 services:
 
-   # Traefik Reverse Proxy Service....git 
+   # Traefik Reverse Proxy
   traefik:
     image: traefik:v2.11
     container_name: traefik
@@ -37,7 +37,7 @@ services:
       - app-network
 
   auth-api:
-    image: okekolawoles36/auth-api:latest
+    image: gerald22/auth-api:latest
     container_name: auth-api
     restart: unless-stopped
     # ports:
@@ -60,7 +60,7 @@ services:
       - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
 
   todos-api:
-    image: okekolawoles36/todo-api:latest
+    image: gerald22/todo-api:latest
     container_name: todos-api
     restart: unless-stopped
     # ports:
@@ -85,7 +85,7 @@ services:
       - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
 
   users-api:
-    image: okekolawoles36/users-api:latest
+    image: gerald22/user-api:latest
     container_name: users-api
     restart: unless-stopped
     # ports:
@@ -111,7 +111,7 @@ services:
 
 
   log-processor:
-    image: okekolawoles36/log-message-processor:latest
+    image: gerald22/log-message-processor:latest
     container_name: log-processor
     environment:
       - REDIS_HOST=redis-queue
@@ -123,10 +123,10 @@ services:
       - app-network
 
   frontend:
-    image: okekolawoles36/frontend:latest
+    image: gerald22/frontend:latest
     container_name: frontend
     # ports:
-    #   - "8080:80" --commented out for TRAEFIK
+    #   - "8080:80"
     restart: unless-stopped
     environment:
       - AUTH_API_ADDRESS=https://kolawole.chickenkiller.com/api/auth
@@ -153,3 +153,4 @@ networks:
 
 volumes:
   traefik-certs:
+

@@ -93,7 +93,7 @@ services:
     environment:
       # - REDIS_HOST=redis
       # - REDIS_PORT=6379
-      # - AUTH_API_URL=http://auth-api:8081
+      # - AUTH_API_URL=http://auth-api:8081  #port 
       - SERVER_PORT=8083
       - JWT_SECRET=myfancysecret
     depends_on:

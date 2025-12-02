@@ -5,11 +5,11 @@ on:
     paths:
       - 'infra/terraform/**'
       - 'infra/ansible/**'
-      -  'infrastructure.yml'
+      - 'infrastructure.yml'
   workflow_dispatch:
 
 env:
-  TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}  
+  TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}  # FIXED: Changed from TF_VAR_public_key
   TF_VAR_private_key_path: ${{ secrets.SSH_PRIVATE_KEY }}
   TF_VAR_domain_name: ${{ secrets.DOMAIN_NAME }}
   TF_VAR_email: ${{ secrets.NOTIFICATION_EMAIL }}
@@ -38,14 +38,24 @@ jobs:
         id: plan
         run: |
           cd infra/terraform
+          set +e  # Don't exit on error
           terraform plan -detailed-exitcode -out=tfplan
-          echo "has-changes=$?" >> $GITHUB_OUTPUT
+          EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          echo "has-changes=${EXIT_CODE}" >> $GITHUB_OUTPUT
+          
+          # Exit with 0 so the job doesn't fail
+          if [ $EXIT_CODE -eq 1 ]; then
+            exit 1  # Only fail on actual errors
+          fi
+          exit 0
           
       - name: Upload Plan
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
           path: infra/terraform/tfplan
+        if: steps.plan.outputs.has-changes == '2'  # Only upload if changes detected
 
   drift-notification:
     needs: terraform-plan
@@ -59,7 +69,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "🚨🚨 Infrastructure Drift for HNG Stage 6 Detected 🚨🚨  "
+          subject: "🚨🚨 Infrastructure Drift for HNG Stage 6 Detected 🚨🚨"
           body: |
             Infrastructure drift has been detected in the HNG Stage 6 project.
             
@@ -72,6 +82,8 @@ jobs:
             Repository: ${{ github.repository }}
             Commit: ${{ github.sha }}
             Branch: ${{ github.ref_name }}
+            
+            View the workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: ${{ secrets.SMTP_USERNAME }}
 
@@ -82,12 +94,20 @@ jobs:
     environment: production-infrastructure
     steps:
       - name: Manual Approval Required
-        run: echo "Manual approval required for infrastructure changes"
+        run: |
+          echo "Manual approval required for infrastructure changes"
+          echo "Exit code from plan: ${{ needs.terraform-plan.outputs.has-changes }}"
 
   terraform-apply:
     needs: [terraform-plan, manual-approval]
     runs-on: ubuntu-latest
-    if: always() && (needs.terraform-plan.outputs.has-changes == '0' || (needs.terraform-plan.outputs.has-changes == '2' && needs.manual-approval.result == 'success'))
+    if: |
+      always() && 
+      needs.terraform-plan.result == 'success' &&
+      (
+        needs.terraform-plan.outputs.has-changes == '0' || 
+        (needs.terraform-plan.outputs.has-changes == '2' && needs.manual-approval.result == 'success')
+      )
     steps:
       - uses: actions/checkout@v3
       

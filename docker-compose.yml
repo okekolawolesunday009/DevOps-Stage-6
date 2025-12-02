@@ -123,8 +123,7 @@ services:
       - app-network
 
     frontend:
-      build: ./frontend
-      dockerfile: Dockerfile
+      image: gerald22/frontend:latest
       container_name: frontend
       restart: unless-stopped
       environment:

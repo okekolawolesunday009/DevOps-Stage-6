@@ -1,6 +1,6 @@
 services:
 
-   # Traefik Reverse Proxy
+   # Traefik Reverse Proxy Service
   traefik:
     image: traefik:v2.11
     container_name: traefik

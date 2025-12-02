@@ -9,7 +9,7 @@ RUN mvn dependency:go-offline
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Runtime stage - use Java 8 JRE
+# Runtime stage - use Java 8 JRE............
 FROM eclipse-temurin:8-jre-alpine
 
 WORKDIR /app

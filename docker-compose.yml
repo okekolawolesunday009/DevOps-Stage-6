@@ -122,30 +122,29 @@ services:
     networks:
       - app-network
 
-  frontend:
-    image: okekolawoles36/frontend:latest
-    container_name: frontend
-    # ports:
-    #   - "8080:80" --commented out for TRAEFIK
-    restart: unless-stopped
-    environment:
-      - AUTH_API_ADDRESS=https://kolawole.chickenkiller.com/api/auth
-      - TODOS_API_ADDRESS=https://kolawole.chickenkiller.com/api/todos
-    depends_on:
-      - auth-api
-      - todos-api
-      - users-api
-    networks:
-      - app-network
-    labels:
-      - "traefik.enable=true"
-      
-      # ✅ For REMOTE (HTTPS):
-      - "traefik.http.routers.frontend.rule=Host(`kolawole.chickenkiller.com`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-      
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+    frontend:
+      build: ./frontend
+      dockerfile: Dockerfile
+      container_name: frontend
+      restart: unless-stopped
+      environment:
+        - AUTH_API_ADDRESS=https://kolawole.chickenkiller.com/api/auth
+        - TODOS_API_ADDRESS=https://kolawole.chickenkiller.com/api/todos
+
+      depends_on:
+        - auth-api
+        - todos-api
+        - users-api
+
+      networks:
+        - app-network
+
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.frontend.rule=Host(`kolawole.chickenkiller.com`)"
+        - "traefik.http.routers.frontend.entrypoints=websecure"
+        - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+        - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
 networks:
   app-network:

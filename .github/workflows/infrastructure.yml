@@ -5,6 +5,7 @@ on:
     paths:
       - 'infra/terraform/**'
       - 'infra/ansible/**'
+      -  'infrastructure.yml'
   workflow_dispatch:
 
 env:

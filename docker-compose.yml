@@ -126,7 +126,7 @@ services:
     image: okekolawoles36/frontend:latest
     container_name: frontend
     # ports:
-    #   - "8080:80"
+    #   - "8080:80" --commented out for TRAEFIK
     restart: unless-stopped
     environment:
       - AUTH_API_ADDRESS=https://kolawole.chickenkiller.com/api/auth

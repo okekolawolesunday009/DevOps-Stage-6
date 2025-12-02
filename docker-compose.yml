@@ -85,7 +85,7 @@ services:
       - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
 
   users-api:
-    image: okekolawoles36/user-api:latest
+    image: okekolawoles36/users-api:latest
     container_name: users-api
     restart: unless-stopped
     # ports:

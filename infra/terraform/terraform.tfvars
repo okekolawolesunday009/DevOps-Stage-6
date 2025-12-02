@@ -8,6 +8,6 @@ public_key_path  = "~/.ssh/id_rsa.pub"
 private_key_path = "~/.ssh/id_rsa"
 
 # Application Configuration
-domain      = "kolawole.the.chickenkiller.com"  # Update when you get domain
+domain      = "kolawole.chickenkiller.com"  # Update when you get domain
 acme_email  = "okolawoles36@gmail.com"
 github_repo = "https://github.com/okekolawolesunday009/DevOps-Stage-6.git"

@@ -4,6 +4,5 @@ terraform {
     key            = "devops-app/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "devops-stage6-terraform-locks"
   }
 }

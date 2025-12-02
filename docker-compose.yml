@@ -10,11 +10,11 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      # - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      # - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=okekolawoles36@gmail.com"
+      - "--certificatesresolvers.letsencrypt.acme.email=okekolawolesunday@gmail.com"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--api.dashboard=true"
 
@@ -37,7 +37,7 @@ services:
       - app-network
 
   auth-api:
-    image: gerald22/auth-api:latest
+    image: okekolawoles36/auth-api:latest
     container_name: auth-api
     restart: unless-stopped
     # ports:
@@ -60,7 +60,7 @@ services:
       - "traefik.http.services.auth-api.loadbalancer.server.port=8081"
 
   todos-api:
-    image: gerald22/todo-api:latest
+    image: okekolawoles36/todo-api:latest
     container_name: todos-api
     restart: unless-stopped
     # ports:
@@ -85,7 +85,7 @@ services:
       - "traefik.http.services.todos-api.loadbalancer.server.port=8082"
 
   users-api:
-    image: gerald22/user-api:latest
+    image: okekolawoles36/user-api:latest
     container_name: users-api
     restart: unless-stopped
     # ports:
@@ -111,7 +111,7 @@ services:
 
 
   log-processor:
-    image: gerald22/log-message-processor:latest
+    image: okekolawoles36/log-message-processor:latest
     container_name: log-processor
     environment:
       - REDIS_HOST=redis-queue
@@ -152,5 +152,4 @@ networks:
     driver: bridge
 
 volumes:
-  traefik-certs:
-
+   traefik-certs:

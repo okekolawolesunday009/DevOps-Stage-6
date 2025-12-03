@@ -168,7 +168,7 @@ jobs:
         server_port: 587
         username: ${{ secrets.SMTP_USERNAME }}
         password: ${{ secrets.SMTP_PASSWORD }}
-        subject: '⚠️ [ACTION REQUIRED] Terraform Drift Detected - padre.the.chickenkiller.com'
+        subject: '⚠️ [ACTION REQUIRED] Terraform Drift Detected - kolawole.chickenkiller.com'
         to: ${{ secrets.NOTIFICATION_EMAIL }}
         from: 'DevOps CI/CD <${{ secrets.SMTP_USERNAME }}>'
         body: file://email_body.txt
@@ -307,7 +307,7 @@ jobs:
         server_port: 587
         username: ${{ secrets.SMTP_USERNAME }}
         password: ${{ secrets.SMTP_PASSWORD }}
-        subject: '✅ Infrastructure Deployment Successful - padre.the.chickenkiller.com'
+        subject: '✅ Infrastructure Deployment Successful - kolawole.chickenkiller.com'
         to: ${{ secrets.NOTIFICATION_EMAIL }}
         from: 'DevOps CI/CD <${{ secrets.SMTP_USERNAME }}>'
         body: |
@@ -326,7 +326,7 @@ jobs:
           Instance ID: ${{ steps.ec2_info.outputs.instance_id }}
           Instance IP: ${{ steps.ec2_info.outputs.instance_ip }}
 
-          🌐 Application URL: https://padre.the.chickenkiller.com
+          🌐 Application URL: https://kolawole.the.chickenkiller.com
 
           ✨ Infrastructure is ready. Ansible configuration will run next if server exists.
 
@@ -338,7 +338,7 @@ jobs:
         server_port: 587
         username: ${{ secrets.SMTP_USERNAME }}
         password: ${{ secrets.SMTP_PASSWORD }}
-        subject: '❌ Infrastructure Deployment Failed - padre.the.chickenkiller.com'
+        subject: '❌ Infrastructure Deployment Failed - kolawole.chickenkiller.com'
         to: ${{ secrets.NOTIFICATION_EMAIL }}
         from: 'DevOps CI/CD <${{ secrets.SMTP_USERNAME }}>'
         body: |
@@ -439,7 +439,7 @@ jobs:
         server_port: 587
         username: ${{ secrets.SMTP_USERNAME }}
         password: ${{ secrets.SMTP_PASSWORD }}
-        subject: '✅ Ansible Configuration Successful - padre.the.chickenkiller.com'
+        subject: '✅ Ansible Configuration Successful - kolawole.chickenkiller.com'
         to: ${{ secrets.NOTIFICATION_EMAIL }}
         from: 'DevOps CI/CD <${{ secrets.SMTP_USERNAME }}>'
         body: |
@@ -467,7 +467,7 @@ jobs:
         server_port: 587
         username: ${{ secrets.SMTP_USERNAME }}
         password: ${{ secrets.SMTP_PASSWORD }}
-        subject: '❌ Ansible Configuration Failed - padre.the.chickenkiller.com'
+        subject: '❌ Ansible Configuration Failed - kolawole.chickenkiller.com'
         to: ${{ secrets.NOTIFICATION_EMAIL }}
         from: 'DevOps CI/CD <${{ secrets.SMTP_USERNAME }}>'
         body: |

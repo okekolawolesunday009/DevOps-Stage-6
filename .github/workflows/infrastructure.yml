@@ -43,8 +43,8 @@ jobs:
     - name: Setup SSH Key for Terraform
       run: |
         mkdir -p ${{ github.workspace }}/infra/terraform/.ssh
-        echo "${{ secrets.SSH_PUBLIC_KEY }}" > ${{ github.workspace }}/infra/terraform/.ssh/devops_stage6.pub
-        chmod 644 ${{ github.workspace }}/infra/terraform/.ssh/devops_stage6.pub
+        echo "${{ secrets.SSH_PUBLIC_KEY }}" > ${{ github.workspace }}/infra/terraform/.ssh/id_rsa.pub
+        chmod 644 ${{ github.workspace }}/infra/terraform/.ssh/id_rsa.pub
 
     - name: Terraform Init
       working-directory: ./infra/terraform
@@ -106,7 +106,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ssh-key
-        path: infra/terraform/.ssh/devops_stage6.pub
+        path: infra/terraform/.ssh/id_rsa.pub
         retention-days: 1
 
   send-drift-notification:
@@ -376,8 +376,8 @@ jobs:
     - name: Setup SSH Key for Ansible
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/devops_stage6
-        chmod 600 ~/.ssh/devops_stage6
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
         chmod 700 ~/.ssh
 
     - name: Install Ansible
@@ -396,7 +396,7 @@ jobs:
         # Create/update hosts.ini
         cat > infra/ansible/inventory/hosts.ini <<EOF
         [web]
-        todo_server ansible_host=$INSTANCE_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/devops_stage6 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+        todo_server ansible_host=$INSTANCE_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no'
         EOF
 
         echo "✅ Inventory updated:"
@@ -408,7 +408,7 @@ jobs:
         echo "⏳ Waiting for SSH to be ready on $INSTANCE_IP..."
 
         for i in {1..30}; do
-          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ~/.ssh/devops_stage6 ubuntu@$INSTANCE_IP "echo 'SSH Ready'" 2>/dev/null; then
+          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ~/.ssh/id_rsa ubuntu@$INSTANCE_IP "echo 'SSH Ready'" 2>/dev/null; then
             echo "✅ SSH is ready!"
             exit 0
           fi
@@ -510,8 +510,8 @@ jobs:
     - name: Setup SSH Key for Terraform
       run: |
         mkdir -p ${{ github.workspace }}/infra/terraform/.ssh
-        echo "${{ secrets.SSH_PUBLIC_KEY }}" > ${{ github.workspace }}/infra/terraform/.ssh/devops_stage6.pub
-        chmod 644 ${{ github.workspace }}/infra/terraform/.ssh/devops_stage6.pub
+        echo "${{ secrets.SSH_PUBLIC_KEY }}" > ${{ github.workspace }}/infra/terraform/.ssh/id_rsa.pub
+        chmod 644 ${{ github.workspace }}/infra/terraform/.ssh/id_rsa.pub
 
     - name: Terraform Init
       working-directory: ./infra/terraform
@@ -603,8 +603,8 @@ jobs:
     - name: Setup SSH Key for Ansible
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/devops_stage6
-        chmod 600 ~/.ssh/devops_stage6
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/rsa
+        chmod 600 ~/.ssh/rsa
         chmod 700 ~/.ssh
 
     - name: Install Ansible
@@ -619,7 +619,7 @@ jobs:
         mkdir -p infra/ansible/inventory
         cat > infra/ansible/inventory/hosts.ini <<EOF
         [web]
-        todo_server ansible_host=$INSTANCE_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/devops_stage6 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+        todo_server ansible_host=$INSTANCE_IP ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no'
         EOF
         echo "✅ Inventory updated"
 
@@ -629,7 +629,7 @@ jobs:
         echo "⏳ Waiting for SSH to be ready on $INSTANCE_IP..."
 
         for i in {1..30}; do
-          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ~/.ssh/devops_stage6 ubuntu@$INSTANCE_IP "echo 'SSH Ready'" 2>/dev/null; then
+          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ~/.ssh/rsa ubuntu@$INSTANCE_IP "echo 'SSH Ready'" 2>/dev/null; then
             echo "✅ SSH is ready!"
             exit 0
           fi

@@ -455,7 +455,7 @@ jobs:
           Instance ID: ${{ needs.terraform-apply.outputs.instance_id }}
           Instance IP: ${{ needs.terraform-apply.outputs.instance_ip }}
 
-          🌐 Application URL: https://padre.the.chickenkiller.com
+          🌐 Application URL: https://kolawole.chickenkiller.com
 
           ✨ Infrastructure is fully configured and ready for application deployment.
 

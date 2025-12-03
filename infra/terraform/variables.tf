@@ -1,13 +1,7 @@
-variable "aws_region" {
-  description = "AWS region for resources"
-  type        = string
-  default     = "us-east-1"
-}
 
-variable "instance_type" {
-  description = "EC2 instance type"
+variable "ami_id" {
+  description = "Existing AMI ID to use for EC2"
   type        = string
-  default     = "t3.medium"
 }
 
 variable "key_name" {
